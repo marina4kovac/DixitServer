@@ -33,14 +33,29 @@ async function saveOne(collection, item) {
     }
 }
 
-async function updateOne(collection, item) {
+async function updateOne(collection, filter, updateOpts) {
     let database = await openDB();
     try {
         let db = database.db(dbNAME);
-        await db.collection(collection).findOneAndReplace({
-            '_id': typeof (item._id) === "string" ? ObjectId(item._id) : item._id
-        }, item);
-        return true;
+        let result = await db.collection(collection).findOneAndUpdate(filter, updateOpts, {
+            returnOriginal: false
+        });
+        return result.value;
+    } finally {
+        await database.close();
+    }
+}
+
+async function getAll(collection, filter) {
+    let database = await openDB();
+    try {
+        let db = database.db(dbNAME);
+        let result = db.collection(collection).find(filter);
+        if (!result) {
+            return [];
+        } else {
+            return await result.toArray();
+        }
     } finally {
         await database.close();
     }
@@ -49,5 +64,6 @@ async function updateOne(collection, item) {
 module.exports = {
     getOne,
     saveOne,
-    updateOne
+    updateOne,
+    getAll
 }

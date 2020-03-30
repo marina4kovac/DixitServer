@@ -9,6 +9,7 @@ var debug = require('debug')('server:server');
 var http = require('http');
 const socketIo = require('socket.io');
 var dbService = require('../utils/db-service');
+var ObjectID = require('mongodb').ObjectID;
 
 /**
  * Get port from environment and store in Express.
@@ -37,19 +38,17 @@ server.on('listening', onListening);
 const io = socketIo(server);
 io.on('connection', (socket) => {
   console.log('connected :' + socket.request._query.gameId);
-  let data = socket.request._query;
-  if (data.type === 'getGame') {
-    let gameId = data.gameId;
+  let gameId = socket.request._query.gameId;
+  if (gameId) {
     dbService.getOne('games', {
-      '_id': typeof gameId === "string" ? IdObjectId(gameId) : gameId
+      '_id': new ObjectID(gameId)
     }).then(result => {
-      console.log(result);
-      socket.emit('updateRequest', result);
+      socket.broadcast.emit('updateRequest', result);
     });
   }
 
   socket.on('disconnect', () => {
-    console.log('disconnected');
+    console.log('disconnected :' + socket.request);
   })
 });
 
