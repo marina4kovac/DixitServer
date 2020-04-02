@@ -33,13 +33,21 @@ async function saveOne(collection, item) {
     }
 }
 
-async function updateOne(collection, filter, updateOpts) {
+async function updateOne(collection, filter, updateOpts, arrayFilters = undefined) {
     let database = await openDB();
     try {
         let db = database.db(dbNAME);
-        let result = await db.collection(collection).findOneAndUpdate(filter, updateOpts, {
-            returnOriginal: false
-        });
+        let result;
+        if (arrayFilters) {
+            result = await db.collection(collection).findOneAndUpdate(filter, updateOpts, {
+                returnOriginal: false,
+                arrayFilters
+            });
+        } else {
+            result = await db.collection(collection).findOneAndUpdate(filter, updateOpts, {
+                returnOriginal: false
+            });
+        }
         return result.value;
     } finally {
         await database.close();

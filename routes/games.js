@@ -8,7 +8,8 @@ const GameState = {
     Waiting: 0,
     ChoosingWord: 1,
     PlayingCards: 2,
-    Guessing: 3
+    Guessing: 3,
+    Results: 4
 };
 
 router.post('/createGame', cors(), (req, res, next) => {
@@ -79,6 +80,7 @@ async function updateState(gameId, newState) {
     return result;
 }
 
+
 // router.post('/getGame', cors(), (req, res, next) => {
 //     let gameId = req.body;
 //     dbService.getOne('games', {
@@ -102,7 +104,7 @@ router.get('/getActiveGames', cors(), (req, res, next) => {
     });
 });
 
-router.get('/chooseWord', cors(), (req, res, next) => {
+router.post('/chooseWord', cors(), (req, res, next) => {
     let {
         gameId,
         word
@@ -113,7 +115,8 @@ router.get('/chooseWord', cors(), (req, res, next) => {
     }, {
         $set: {
             word: word,
-            state: GameState.PlayingCards
+            state: GameState.PlayingCards,
+            guesses: 0
         }
     }).then(result => {
         res.json(result);
@@ -121,4 +124,92 @@ router.get('/chooseWord', cors(), (req, res, next) => {
         res.json(undefined);
     });
 });
+
+router.post('/playCard', cors(), (req, res, next) => {
+    let {
+        gameId,
+        player,
+        card
+    } = req.body;
+
+    playCard(gameId, player, card).then(result => res.json(result));
+});
+
+async function playCard(gameId, player, card) {
+    let playerDeck = `decks.playersDecks.${player}`;
+    let result = await dbService.updateOne('games', {
+        '_id': new ObjectID(gameId)
+    }, {
+        $push: {
+            'decks.tableDeck': {
+                card,
+                player,
+                'guesses': []
+            }
+        },
+        $pull: {
+            [playerDeck]: card
+        }
+    });
+    if (result && result.decks && result.decks.tableDeck.length === result.numberOfPlayers) {
+        result = await updateState(result._id, GameState.Guessing);
+        return result;
+    } else {
+        return result;
+    }
+}
+
+router.post('/guessCard', cors(), (req, res, next) => {
+    let {
+        gameId,
+        player,
+        card
+    } = req.body;
+
+    guessCard(gameId, player, card).then(result => res.json(result));
+});
+
+async function guessCard(gameId, player, card) {
+    let result = await dbService.updateOne('games', {
+        '_id': new ObjectID(gameId)
+    }, {
+        $push: {
+            'decks.tableDeck.$[elem].guesses': player
+        },
+        $inc: {
+            'guesses': 1
+        },
+
+    }, [{
+        'elem.card': card
+    }]);
+    if (result && result.guesses === result.numberOfPlayers - 1) {
+        // result = await calcPoints(result);
+        result = await updateState(result._id, GameState.Results);
+    }
+    return result;
+}
+
+async function calcPoints(result) {
+    let index = [];
+    result.players.forEach((player, index) => {
+        let guessedMyCard = result.decks.tableDeck.find(elem => elem.player === index);
+        index.push(0);
+        if (index === result.playerChoosing) {
+            if (guessedMyCard.length !== 0 || guessedMyCard.length !== result.numberOfPlayers - 1) {
+                inc[index] += 3;
+            }
+        } else {
+            inc[index] += guessedMyCard.length;
+            let rightAnswer = result.decks.tableDeck.find(elem => elem.player === result.playerChoosing);
+            inc[index] += 3 * (rightAnswer.indexOf(player) > -1);
+        }
+    });
+    // dbService.updateOne('games', {
+    //     '_id': result._id
+    // }, {
+    //     $inc: {}
+    // })
+}
+
 module.exports = router;

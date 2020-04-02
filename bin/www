@@ -7,9 +7,6 @@
 var app = require('../app');
 var debug = require('debug')('server:server');
 var http = require('http');
-const socketIo = require('socket.io');
-var dbService = require('../utils/db-service');
-var ObjectID = require('mongodb').ObjectID;
 
 /**
  * Get port from environment and store in Express.
@@ -35,22 +32,8 @@ server.on('listening', onListening);
  * Create sockets.
  */
 
-const io = socketIo(server);
-io.on('connection', (socket) => {
-  console.log('connected :' + socket.request._query.gameId);
-  let gameId = socket.request._query.gameId;
-  if (gameId) {
-    dbService.getOne('games', {
-      '_id': new ObjectID(gameId)
-    }).then(result => {
-      socket.broadcast.emit('updateRequest', result);
-    });
-  }
-
-  socket.on('disconnect', () => {
-    console.log('disconnected :' + socket.request);
-  })
-});
+var io = app.io;
+io.attach(server);
 
 /**
  * Normalize a port into a number, string, or false.
