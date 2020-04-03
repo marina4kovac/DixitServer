@@ -184,32 +184,36 @@ async function guessCard(gameId, player, card) {
         'elem.card': card
     }]);
     if (result && result.guesses === result.numberOfPlayers - 1) {
-        // result = await calcPoints(result);
-        result = await updateState(result._id, GameState.Results);
+        result = await calcPoints(result);
+        if (result) {
+            result = await updateState(result._id, GameState.Results);
+        }
     }
+    console.log(JSON.stringify(result));
     return result;
 }
 
 async function calcPoints(result) {
-    let index = [];
+    let inc = {};
     result.players.forEach((player, index) => {
-        let guessedMyCard = result.decks.tableDeck.find(elem => elem.player === index);
-        index.push(0);
+        let guessedMyCard = result.decks.tableDeck.find(elem => elem.player === index).guesses;
+        inc[`points.${index}`] = 0;
         if (index === result.playerChoosing) {
-            if (guessedMyCard.length !== 0 || guessedMyCard.length !== result.numberOfPlayers - 1) {
-                inc[index] += 3;
+            if (guessedMyCard.length !== 0 && guessedMyCard.length !== result.numberOfPlayers - 1) {
+                inc[`points.${index}`] += 3;
             }
         } else {
-            inc[index] += guessedMyCard.length;
-            let rightAnswer = result.decks.tableDeck.find(elem => elem.player === result.playerChoosing);
-            inc[index] += 3 * (rightAnswer.indexOf(player) > -1);
+            inc[`points.${index}`] += guessedMyCard.length;
+            let rightAnswer = result.decks.tableDeck.find(elem => elem.player === result.playerChoosing).guesses;
+            inc[`points.${index}`] += 3 * (!!rightAnswer.find(player));
         }
     });
-    // dbService.updateOne('games', {
-    //     '_id': result._id
-    // }, {
-    //     $inc: {}
-    // })
+    result = dbService.updateOne('games', {
+        '_id': result._id
+    }, {
+        $inc: inc
+    });
+    return result;
 }
 
 module.exports = router;
