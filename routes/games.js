@@ -9,7 +9,8 @@ const GameState = {
     ChoosingWord: 1,
     PlayingCards: 2,
     Guessing: 3,
-    Results: 4
+    Results: 4,
+    End: 5
 };
 
 router.post('/createGame', cors(), (req, res, next) => {
@@ -79,16 +80,6 @@ async function updateState(gameId, newState) {
     }
     return result;
 }
-
-
-// router.post('/getGame', cors(), (req, res, next) => {
-//     let gameId = req.body;
-//     dbService.getOne('games', {
-//         '_id': typeof gameId === "string" ? ObjectID(gameId) : gameId
-//     }).then(result => {
-//         res.json(result);
-//     });
-// });
 
 router.get('/getActiveGames', cors(), (req, res, next) => {
     dbService.getAll('games', {
@@ -189,7 +180,6 @@ async function guessCard(gameId, player, card) {
             result = await updateState(result._id, GameState.Results);
         }
     }
-    console.log(JSON.stringify(result));
     return result;
 }
 
@@ -211,9 +201,75 @@ async function calcPoints(result) {
     result = dbService.updateOne('games', {
         '_id': result._id
     }, {
-        $inc: inc
+        $inc: inc,
+        $unset: {
+            guesses: ""
+        },
+        $set: {
+            returned: 0
+        }
     });
     return result;
+}
+
+router.post('/returnFromResults', cors(), (req, res, next) => {
+    let gameId = req.body.gameId;
+    returnFromResults(gameId).then(result => res.json(result));
+});
+
+async function returnFromResults(gameId) {
+    let result = await dbService.updateOne('games', {
+        '_id': new ObjectID(gameId)
+    }, {
+        $inc: {
+            returned: 1
+        }
+    });
+    if (result && result.returned === result.numberOfPlayers) {
+        // go to end or deal for next round
+        let newState;
+        if (result.decks.freeDeck.length >= result.numberOfPlayers) {
+            // deal next round
+            result = await generateNewRound(result);
+            newState = GameState.ChoosingWord;
+        } else {
+            // end of game
+            newState = GameState.End;
+        }
+        if (result && result._id) {
+            result = updateState(result._id, newState);
+        }
+    }
+    return result;
+}
+
+async function generateNewRound(gameInfo) {
+    let dealCards = [];
+    let freeDeck = gameInfo.decks.freeDeck;
+    let pushReq = {};
+    for (let i = 0; i < gameInfo.numberOfPlayers; i++) {
+        const random_card = Math.floor(Math.random() * (freeDeck.length + 1));
+        let cardID = freeDeck.splice(random_card, 1)[0];
+        dealCards.push(cardID);
+        pushReq[`decks.playersDecks.${i}`] = cardID;
+    }
+    return await dbService.updateOne('games', {
+        '_id': gameInfo._id
+    }, {
+        $pullAll: {
+            'decks.freeDeck': dealCards
+        },
+        $set: {
+            'decks.tableDeck': [],
+            'prevPoints': gameInfo.points,
+            'playerChoosing': (gameInfo.playerChoosing + 1) % gameInfo.numberOfPlayers
+        },
+        $unset: {
+            'returned': "",
+            'word': ""
+        },
+        $push: pushReq
+    });
 }
 
 module.exports = router;
