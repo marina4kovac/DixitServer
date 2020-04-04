@@ -195,7 +195,9 @@ async function calcPoints(result) {
         } else {
             inc[`points.${index}`] += guessedMyCard.length;
             let rightAnswer = result.decks.tableDeck.find(elem => elem.player === result.playerChoosing).guesses;
-            inc[`points.${index}`] += 3 * (!!rightAnswer.find(elem => elem === player));
+            if (rightAnswer && rightAnswer.find(elem => elem === player)) {
+                inc[`points.${index}`] += 3;
+            }
         }
     });
     result = dbService.updateOne('games', {
