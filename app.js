@@ -14,26 +14,43 @@ var app = express();
 
 var io = app.io = require('socket.io')();
 
+var connections = new Map();
+var mapGameResult = require('./utils/game-utils').mapResult;
+
 io.on('connection', (socket) => {
-    console.log('connected :' + socket.request._query.player);
-    let gameId = socket.request._query.gameId;
-    if (gameId) {
+    let {
+        gameId,
+        player
+    } = socket.request._query;
+    console.log('connected :' + player);
+    connections.set(player, socket);
+    dbService.getOne('games', {
+        '_id': new ObjectID(gameId)
+    }).then(result => {
+        connections.forEach((value, key) => {
+            if (key !== player) {
+                let playerId = result.players.findIndex(val => val === key);
+                value.emit('updateRequest', mapGameResult(result, playerId));
+            }
+        });
+    });
+
+    socket.on('updated', (gameId) => {
         dbService.getOne('games', {
             '_id': new ObjectID(gameId)
         }).then(result => {
-            socket.broadcast.emit('updateRequest', result);
+            connections.forEach((value, key) => {
+                if (key !== player) {
+                    let playerId = result.players.findIndex(val => val === key);
+                    value.emit('updateRequest', mapGameResult(result, playerId));
+                }
+            });
         });
-    }
-
-    socket.on('updated', (message) => {
-        dbService.getOne('games', {
-            '_id': new ObjectID(message)
-        }).then(result =>
-            socket.broadcast.emit('updateRequest', result));
     });
 
     socket.on('disconnect', () => {
-        console.log('disconnected :' + socket.request._query.player);
+        console.log('disconnected :' + player);
+        connections.delete(player);
     })
 });
 
