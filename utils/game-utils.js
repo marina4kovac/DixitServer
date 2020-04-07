@@ -157,12 +157,12 @@ async function playCard(gameId, player, card) {
         }
     });
     if (result && result.decks && result.decks.tableDeck.length === result.numberOfPlayers) {
-        result.tableDeck = _.shuffle(result.tableDeck);
+        result.decks.tableDeck = _.shuffle(result.decks.tableDeck);
         result = await dbService.updateOne('games', {
             '_id': result._id
         }, {
             $set: {
-                'decks.tableDeck': result.tableDeck,
+                'decks.tableDeck': result.decks.tableDeck,
                 'state': GameState.Guessing
             }
         });
