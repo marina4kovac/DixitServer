@@ -16,6 +16,7 @@ var io = app.io = require('socket.io')();
 
 var connections = new Map();
 var mapGameResult = require('./utils/game-utils').mapResult;
+var deleteById = require('./utils/game-utils').deleteById;
 
 io.on('connection', (socket) => {
     let {
@@ -51,6 +52,15 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('disconnected :' + player);
         connections.delete(player);
+        if (connections.size === 0) {
+            dbService.getOne('games', {
+                '_id': new ObjectID(gameId)
+            }).then(result => {
+                if (result.state === 5) {
+                    deleteById(gameId);
+                }
+            });
+        }
     })
 });
 

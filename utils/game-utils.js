@@ -245,7 +245,7 @@ async function generateNewRound(gameInfo) {
     let freeDeck = gameInfo.decks.freeDeck;
     let pushReq = {};
     for (let i = 0; i < gameInfo.numberOfPlayers; i++) {
-        const random_card = Math.floor(Math.random() * (freeDeck.length + 1));
+        const random_card = Math.floor(Math.random() * freeDeck.length);
         let cardID = freeDeck.splice(random_card, 1)[0];
         dealCards.push(cardID);
         pushReq[`decks.playersDecks.${i}`] = cardID;
@@ -269,6 +269,11 @@ async function generateNewRound(gameInfo) {
     });
 }
 
+async function deleteById(gameId) {
+    return await dbService.deleteOne('games', {
+        '_id': new ObjectID(gameId)
+    });
+}
 
 function mapResult(result, playerId) {
     let fields = [
@@ -306,6 +311,7 @@ function mapResult(result, playerId) {
     return mappedResult;
 }
 
+
 module.exports = {
     generateGame,
     joinGame,
@@ -316,6 +322,7 @@ module.exports = {
     calcPoints,
     returnFromResults,
     generateNewRound,
+    deleteById,
     mapResult,
     GameState
 };
