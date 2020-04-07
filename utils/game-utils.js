@@ -1,7 +1,7 @@
 var dbService = require('./db-service');
 const ObjectID = require('mongodb').ObjectID;
 
-const totalNumberOfCards = 16;
+const totalNumberOfCards = 30;
 const cardsPerPlayer = 6;
 
 const GameState = {
