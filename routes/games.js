@@ -3,17 +3,14 @@ var router = express.Router();
 var cors = require('cors');
 var dbService = require('../utils/db-service');
 const ObjectID = require('mongodb').ObjectID;
+
 var {
     generateGame,
     joinGame,
-    updateState,
     chooseWord,
     playCard,
     guessCard,
-    calcPoints,
     returnFromResults,
-    generateNewRound,
-    GameState
 } = require('../utils/game-utils');
 
 

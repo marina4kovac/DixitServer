@@ -1,6 +1,8 @@
 var dbService = require('./db-service');
 const ObjectID = require('mongodb').ObjectID;
+var _ = require('underscore');
 
+const maxCards = 108;
 const totalNumberOfCards = 30;
 const cardsPerPlayer = 6;
 
@@ -42,7 +44,7 @@ async function generateGame(gameName, numberOfPlayers, player) {
 }
 
 function createGameDecks(numberOfPlayers) {
-    let freeCards = [...Array(totalNumberOfCards + 1).keys()].slice(1);
+    let freeCards = _.sample([...Array(maxCards + 1).keys()].slice(1), totalNumberOfCards);
 
     let players_decks = [];
 
@@ -155,7 +157,15 @@ async function playCard(gameId, player, card) {
         }
     });
     if (result && result.decks && result.decks.tableDeck.length === result.numberOfPlayers) {
-        result = await updateState(result._id, GameState.Guessing);
+        result.freeDeck = _.shuffle(result.freeDeck);
+        result = await dbService.updateOne('games', {
+            '_id': result._id
+        }, {
+            $set: {
+                'decks.freeDeck': result.freeDeck,
+                'state': GameState.Guessing
+            }
+        });
         return mapResult(result, player);
     } else {
         return result ? mapResult(result, player) : undefined;
@@ -197,7 +207,11 @@ async function calcPoints(result) {
         } else {
             inc[`points.${index}`] += guessedMyCard.length;
             let rightAnswer = result.decks.tableDeck.find(elem => elem.player === result.playerChoosing).guesses;
-            inc[`points.${index}`] += 3 * (!!rightAnswer.find(elem => elem === player));
+            if (rightAnswer.length === result.numberOfPlayers - 1 || rightAnswer.length === 0) {
+                inc[`points.${index}`] += 2;
+            } else {
+                inc[`points.${index}`] += 3 * (!!rightAnswer.find(elem => elem === player));
+            }
         }
     });
     result = dbService.updateOne('games', {
