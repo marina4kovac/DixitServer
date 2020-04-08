@@ -73,7 +73,7 @@ async function deleteOne(collection, filter) {
     let database = await openDB();
     try {
         let db = database.db(dbNAME);
-        let result = db.collection(collection).deleteOne(filter);
+        let result = await db.collection(collection).deleteOne(filter);
         return result;
     } finally {
         await database.close();

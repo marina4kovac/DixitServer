@@ -285,7 +285,7 @@ async function generateNewRound(gameInfo) {
 
 async function deleteById(gameId) {
     return await dbService.deleteOne('games', {
-        '_id': new ObjectID(gameId)
+        '_id': gameId
     });
 }
 

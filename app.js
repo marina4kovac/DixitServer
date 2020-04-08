@@ -46,21 +46,15 @@ io.on('connection', (socket) => {
                     value.emit('updateRequest', mapGameResult(result, playerId));
                 }
             });
+            if (result && result.state === 5) {
+                deleteById(result._id);
+            }
         });
     });
 
     socket.on('disconnect', () => {
         console.log('disconnected :' + player);
         connections.delete(player);
-        if (connections.size === 0) {
-            dbService.getOne('games', {
-                '_id': new ObjectID(gameId)
-            }).then(result => {
-                if (result.state === 5) {
-                    deleteById(gameId);
-                }
-            });
-        }
     })
 });
 
