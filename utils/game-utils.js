@@ -3,7 +3,7 @@ const ObjectID = require('mongodb').ObjectID;
 var _ = require('underscore');
 
 const maxCards = 108;
-const totalNumberOfCards = 30;
+const totalNumberOfCards = 50;
 const cardsPerPlayer = 6;
 
 const GameState = {
