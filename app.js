@@ -28,10 +28,9 @@ io.on('connection', (socket) => {
     dbService.getOne('games', {
         '_id': new ObjectID(gameId)
     }).then(result => {
-        connections.forEach((value, key) => {
-            if (key !== player) {
-                let playerId = result.players.findIndex(val => val === key);
-                value.emit('updateRequest', mapGameResult(result, playerId));
+        result.players.forEach((user, playerId) => {
+            if (user != player && connections.get(user)) {
+                connections.get(user).emit('updateRequest', mapGameResult(result, playerId));
             }
         });
     });
@@ -40,10 +39,9 @@ io.on('connection', (socket) => {
         dbService.getOne('games', {
             '_id': new ObjectID(gameId)
         }).then(result => {
-            connections.forEach((value, key) => {
-                if (key !== player) {
-                    let playerId = result.players.findIndex(val => val === key);
-                    value.emit('updateRequest', mapGameResult(result, playerId));
+            result.players.forEach((user, playerId) => {
+                if (user != player && connections.get(user)) {
+                    connections.get(user).emit('updateRequest', mapGameResult(result, playerId));
                 }
             });
             if (result && result.state === 5) {

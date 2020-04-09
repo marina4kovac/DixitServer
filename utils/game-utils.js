@@ -3,8 +3,8 @@ const ObjectID = require('mongodb').ObjectID;
 var _ = require('underscore');
 
 const maxCards = 108;
-const totalNumberOfCards = 50;
 const cardsPerPlayer = 6;
+const numberOfRounds = 5;
 
 const GameState = {
     Waiting: 0,
@@ -44,6 +44,7 @@ async function generateGame(gameName, numberOfPlayers, player) {
 }
 
 function createGameDecks(numberOfPlayers) {
+    let totalNumberOfCards = cardsPerPlayer * numberOfPlayers + numberOfPlayers * numberOfRounds;
     let freeCards = _.sample([...Array(maxCards + 1).keys()].slice(1), totalNumberOfCards);
 
     let players_decks = [];
