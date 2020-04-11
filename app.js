@@ -53,8 +53,46 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log('disconnected :' + player);
         connections.delete(player);
+        handleDisconnect(gameId, player);
     })
 });
+
+async function handleDisconnect(gameId, player) {
+    let result = await dbService.getOne('games', {
+        '_id': new ObjectID(gameId)
+    });
+    if (result) {
+        if (result.state === 0) {
+            result = await dbService.updateOne('games', {
+                '_id': result._id
+            }, {
+                $pull: {
+                    'players': player
+                }
+            });
+            if (result.players.length === 0) {
+                await dbService.deleteOne('games', {
+                    '_id': result._id
+                });
+            } else {
+                result.players.forEach((player, playerId) => {
+                    if (connections.get(player)) {
+                        connections.get(player).emit('updateRequest', mapGameResult(result, playerId));
+                    }
+                });
+            }
+        } else {
+            result.players.forEach(player => {
+                if (connections.get(player)) {
+                    connections.get(player).emit('updateRequest', undefined);
+                }
+            });
+            await dbService.deleteOne('games', {
+                '_id': result._id
+            });
+        }
+    }
+}
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
