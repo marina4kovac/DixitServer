@@ -320,7 +320,22 @@ function mapResult(result, playerId) {
             mappedResult.freeDeckSize = result.decks.freeDeck.length;
         }
         if (result.decks.tableDeck) {
-            mappedResult.tableDeck = result.decks.tableDeck;
+            if (result.state === GameState.Results || result.state === GameState.End) {
+                mappedResult.tableDeck = result.decks.tableDeck;
+            } else {
+                mappedResult.tableDeck = result.decks.tableDeck.map(value => {
+                    if (value.player === playerId) {
+                        return {
+                            card: value.card,
+                            player: value.player
+                        };
+                    } else {
+                        return {
+                            card: value.card
+                        }
+                    }
+                });
+            }
         }
     }
     return mappedResult;
