@@ -39,11 +39,13 @@ io.on('connection', (socket) => {
         dbService.getOne('games', {
             '_id': new ObjectID(gameId)
         }).then(result => {
-            result.players.forEach((user, playerId) => {
-                if (user != player && connections.get(user)) {
-                    connections.get(user).emit('updateRequest', mapGameResult(result, playerId));
-                }
-            });
+            if (result) {
+                result.players.forEach((user, playerId) => {
+                    if (user != player && connections.get(user)) {
+                        connections.get(user).emit('updateRequest', mapGameResult(result, playerId));
+                    }
+                });
+            }
             if (result && result.state === 5) {
                 deleteById(result._id);
             }
