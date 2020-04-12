@@ -38,7 +38,7 @@ async function generateGame(gameName, numberOfPlayers, player) {
         };
     } else {
         return {
-            error: 'Database error'
+            errorMsg: 'Database error'
         };
     }
 }
