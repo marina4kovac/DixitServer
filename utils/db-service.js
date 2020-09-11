@@ -17,6 +17,8 @@ async function getOne(collection, filter) {
         let db = database.db(dbNAME);
         let result = await db.collection(collection).findOne(filter);
         return result;
+    } catch (error) {
+        console.log(error);
     } finally {
         await database.close();
     }
