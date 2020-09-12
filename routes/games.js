@@ -11,6 +11,7 @@ var {
     playCard,
     guessCard,
     returnFromResults,
+    mapResult
 } = require('../utils/game-utils');
 
 
@@ -70,7 +71,7 @@ router.post('/chooseWord', cors(), (req, res, next) => {
         word
     } = req.body;
 
-    chooseWord(gameId, word).then(result => res.json(result));
+    chooseWord(gameId, word).then(result => res.json(result && mapResult(result, result.playerChoosing)));
 });
 
 router.post('/playCard', cors(), (req, res, next) => {
@@ -80,7 +81,7 @@ router.post('/playCard', cors(), (req, res, next) => {
         card
     } = req.body;
 
-    playCard(gameId, player, card).then(result => res.json(result));
+    playCard(gameId, player, card).then(result => res.json(result && mapResult(result, player)));
 });
 
 router.post('/guessCard', cors(), (req, res, next) => {
@@ -90,7 +91,7 @@ router.post('/guessCard', cors(), (req, res, next) => {
         card
     } = req.body;
 
-    guessCard(gameId, player, card).then(result => res.json(result));
+    guessCard(gameId, player, card).then(result => res.json(result && mapResult(result, result.players.findIndex(val => val === player))));
 });
 
 
@@ -99,7 +100,7 @@ router.post('/returnFromResults', cors(), (req, res, next) => {
         gameId,
         player
     } = req.body;
-    returnFromResults(gameId, player).then(result => res.json(result));
+    returnFromResults(gameId, player).then(result => res.json(result && mapResult(result, result.players.findIndex(val => val === player))));
 });
 
 
