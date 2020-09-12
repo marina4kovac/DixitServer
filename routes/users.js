@@ -94,6 +94,41 @@ async function handleRegisterRequest(username, password) {
   return ret;
 }
 
+async function handlePlatformLoginRequest(userEmail) {
+  let ret;
+  try {
+    const loginResult = await dbService.getOne('users', {
+      '_id': userEmail
+    });
+    if (!loginResult) {
+      const saveResult = await dbService.saveOne('users', {
+        '_id': userEmail,
+        userEmail: userEmail
+      })
+      if (saveResult) {
+        ret = {
+          success: true
+        };
+      } else {
+        ret = {
+          errorId: 'DB_ERROR',
+          message: 'Something went wrong.'
+        };
+      }
+    } else {
+      ret = {
+        success: true
+      };
+    }
+  } catch (error) {
+    ret = {
+      errorId: 'DB_ERROR',
+      message: 'Something went wrong.'
+    };
+  }
+  return ret;
+}
+
 router.post('/register', cors(), (req, res, next) => {
   let {
     username,
@@ -106,6 +141,21 @@ router.post('/register', cors(), (req, res, next) => {
     });
   } else {
     handleRegisterRequest(username, password).then(result => res.json(result));
+  }
+});
+
+
+router.post('/loginPlatform', cors(), (req, res, next) => {
+  let {
+    userEmail
+  } = req.body;
+  if (!userEmail) {
+    res.json({
+      errorId: 'WRONG_REQUEST',
+      message: 'Wrong request'
+    });
+  } else {
+    handlePlatformLoginRequest(userEmail).then(result => res.json(result));
   }
 });
 

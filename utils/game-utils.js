@@ -23,7 +23,8 @@ async function generateGame(gameName, numberOfPlayers, player) {
         numberOfPlayers,
         state: GameState.Waiting,
         decks,
-        players: [player]
+        players: [player],
+        creator: player
     };
     const result = await dbService.saveOne('games', gameInfo);
     if (result) {
