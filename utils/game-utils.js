@@ -15,7 +15,7 @@ const GameState = {
     End: 5
 };
 
-async function generateGame(gameName, numberOfPlayers, player) {
+async function generateGame(gameName, numberOfPlayers, player, password) {
     const decks = createGameDecks(numberOfPlayers);
     const gameInfo = {
         _id: undefined,
@@ -26,6 +26,9 @@ async function generateGame(gameName, numberOfPlayers, player) {
         players: [player],
         creator: player
     };
+    if (password) {
+        gameInfo.password = password;
+    }
     const result = await dbService.saveOne('games', gameInfo);
     if (result) {
         return {

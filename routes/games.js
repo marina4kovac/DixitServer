@@ -26,6 +26,19 @@ router.post('/createGame', cors(), (req, res, next) => {
     );
 });
 
+router.post('/createPrivateGame', cors(), (req, res, next) => {
+    let {
+        gameName,
+        numberOfPlayers,
+        player,
+        password
+    } = req.body;
+
+    generateGame(gameName, numberOfPlayers, player, password).then(
+        (result) => res.json(result)
+    );
+});
+
 router.post('/joinGame', cors(), (req, res, next) => {
     let {
         player,
