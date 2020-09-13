@@ -1,13 +1,10 @@
 var dbService = require('./db-service');
 const ObjectID = require('mongodb').ObjectID;
 var _ = require('underscore');
-const {
-    isArguments
-} = require('underscore');
 
 const maxCards = 108;
 const cardsPerPlayer = 6;
-const numberOfRounds = 5;
+const numberOfRounds = 1;
 
 var games = new Map();
 
@@ -17,10 +14,11 @@ const GameState = {
     PlayingCards: 2,
     Guessing: 3,
     Results: 4,
-    End: 5
+    End: 5,
+    Rematch: 6
 };
 
-async function generateGame(gameName, numberOfPlayers, player, password) {
+async function generateGame(gameName, numberOfPlayers, player, password, creator) {
     const decks = createGameDecks(numberOfPlayers);
     const gameInfo = {
         _id: undefined,
@@ -29,14 +27,15 @@ async function generateGame(gameName, numberOfPlayers, player, password) {
         state: GameState.Waiting,
         decks,
         players: [player],
-        creator: player,
-        loggedOutPlayers: []
+        creator,
+        loggedOutPlayers: [],
     };
     if (password) {
         gameInfo.password = password;
     }
     const result = await dbService.saveOne('games', gameInfo);
     if (result) {
+        gameInfo._id = result.toHexString();
         games.set(gameInfo._id, gameInfo);
         return {
             success: true,
@@ -56,7 +55,7 @@ async function generateGame(gameName, numberOfPlayers, player, password) {
 }
 
 function createGameDecks(numberOfPlayers) {
-    let totalNumberOfCards = cardsPerPlayer * numberOfPlayers + numberOfPlayers * numberOfRounds;
+    let totalNumberOfCards = cardsPerPlayer * numberOfPlayers + numberOfPlayers * (numberOfPlayers * numberOfRounds - 1);
     let freeCards = _.sample([...Array(maxCards + 1).keys()].slice(1), totalNumberOfCards);
 
     let players_decks = [];
@@ -79,9 +78,9 @@ function createGameDecks(numberOfPlayers) {
     };
 }
 
-async function joinGame(player, gameId, numberOfPlayers) {
+async function joinGame(player, gameId, numberOfPlayers, noObj) {
     let result = await dbService.updateOne('games', {
-        '_id': new ObjectID(gameId),
+        '_id': noObj ? gameId : new ObjectID(gameId),
         'state': GameState.Waiting,
         'players': {
             $not: {
@@ -253,7 +252,19 @@ async function returnFromResults(gameId, player) {
             returned: 1
         }
     });
-    if (result && result.returned >= result.numberOfPlayers - result.loggedOutPlayers.length) {
+    if (result && result.decks.freeDeck.length === 0) {
+        result = await dbService.updateOne('games', {
+            '_id': new ObjectID(gameId)
+        }, {
+            $push: {
+                loggedOutPlayers: player
+            }
+        });
+    }
+    if (result &&
+        ((result.decks.freeDeck.length > 0 && result.returned >= result.numberOfPlayers - result.loggedOutPlayers.length) ||
+            (result.numberOfPlayers === result.loggedOutPlayers.length))
+    ) {
         // go to end or deal for next round
         let newState;
         if (result.decks.freeDeck.length >= result.numberOfPlayers) {
@@ -272,6 +283,83 @@ async function returnFromResults(gameId, player) {
         }
     }
     return result;
+}
+
+async function rematch(gameId, player) {
+    let result = await dbService.updateOne('games', {
+        '_id': new ObjectID(gameId)
+    }, {
+        $addToSet: {
+            'loggedOutPlayers': player
+        }
+    });
+    if (result && result.numberOfPlayers === result.loggedOutPlayers.length) {
+        // await deleteById(result._id);
+    }
+    if (result && result._id) {
+        result.state = GameState.Rematch;
+    }
+    return result;
+}
+
+async function joinRematchGame(gameName, creator, player, numberOfPlayers, password) {
+    const rematchGame = await dbService.updateOrInsert('games', {
+        'gameName': gameName,
+        'creator': creator,
+        'state': GameState.Waiting
+    }, {
+        $set: {
+            'creator': creator
+        }
+    });
+    if (rematchGame && rematchGame.decks) {
+        return await joinGame(player, rematchGame._id, numberOfPlayers, true);
+    } else if (rematchGame && !rematchGame.decks) {
+        return await joinRematchGame(gameName, creator, player, numberOfPlayers, password);
+    } else {
+        const decks = createGameDecks(numberOfPlayers);
+        const gameInfo = {
+            gameName,
+            numberOfPlayers,
+            state: GameState.Waiting,
+            decks,
+            players: [player],
+            creator,
+            loggedOutPlayers: [],
+        };
+        if (password) {
+            gameInfo.password = password;
+        }
+        const result = await dbService.updateOrInsert('games', {
+            'gameName': gameName,
+            'creator': creator,
+            'state': GameState.Waiting
+        }, {
+            $set: {
+                ...gameInfo
+            }
+        });
+        if (result) {
+            gameInfo._id = result._id;
+            games.set(gameInfo._id, gameInfo);
+            return {
+                success: true,
+                gameInfoWaiting: {
+                    _id: gameInfo._id,
+                    numberOfPlayers,
+                    state: GameState.Waiting,
+                    players: [player],
+                    loggedOutPlayers: []
+                }
+            };
+        } else {
+            return {
+                errorMsg: 'Database error'
+            };
+        }
+
+        // return await generateGame(gameName, numberOfPlayers, player, password, creator);
+    }
 }
 
 async function generateNewRound(gameInfo) {
@@ -319,7 +407,10 @@ function mapResult(result, playerId) {
         'prevPoints',
         'players',
         'word',
-        'loggedOutPlayers'
+        'loggedOutPlayers',
+        'gameName',
+        'creator',
+        'password'
     ];
 
     let mappedResult = {};
@@ -414,6 +505,14 @@ async function handleLoggedOutPlayers(game) {
                     }
                 }
             }
+        } else if (game.decks.freeDeck.length === 0 && (game.state === GameState.Results || game.state === GameState.End)) {
+            await dbService.saveOne('finishedGames', {
+                _id: game._id,
+                gameName: game,
+                players: game.players,
+                points: game.points,
+                date: new Date()
+            });
         }
     }
     return result;
@@ -433,5 +532,7 @@ module.exports = {
     deleteById,
     mapResult,
     GameState,
-    handleLoggedOutPlayers
+    handleLoggedOutPlayers,
+    rematch,
+    joinRematchGame
 };

@@ -11,6 +11,8 @@ var {
     playCard,
     guessCard,
     returnFromResults,
+    rematch,
+    joinRematchGame,
     mapResult
 } = require('../utils/game-utils');
 
@@ -22,7 +24,7 @@ router.post('/createGame', cors(), (req, res, next) => {
         player
     } = req.body;
 
-    generateGame(gameName, numberOfPlayers, player).then(
+    generateGame(gameName, numberOfPlayers, player, undefined, player).then(
         (result) => res.json(result)
     );
 });
@@ -35,7 +37,7 @@ router.post('/createPrivateGame', cors(), (req, res, next) => {
         password
     } = req.body;
 
-    generateGame(gameName, numberOfPlayers, player, password).then(
+    generateGame(gameName, numberOfPlayers, player, password, player).then(
         (result) => res.json(result)
     );
 });
@@ -102,6 +104,33 @@ router.post('/returnFromResults', cors(), (req, res, next) => {
     } = req.body;
     returnFromResults(gameId, player).then(result => res.json(result && mapResult(result, result.players.findIndex(val => val === player))));
 });
+
+router.post('/rematch', cors(), (req, res, next) => {
+    let {
+        gameId,
+        player
+    } = req.body;
+    rematch(gameId, player).then(result => res.json(result && mapResult(result, result.players.findIndex(val => val === player))));
+});
+
+router.post('/joinRematchGame', cors(), (req, res, next) => {
+    let {
+        gameName,
+        creator,
+        player,
+        numberOfPlayers,
+        password
+    } = req.body;
+
+    joinRematchGame(gameName,
+        creator,
+        player,
+        numberOfPlayers,
+        password).then(result => {
+        res.json(result);
+    });
+});
+
 
 
 

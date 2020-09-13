@@ -10,38 +10,37 @@ var ObjectID = require('mongodb').ObjectID;
 var users = require('./routes/users');
 var games = require('./routes/games');
 const {
-    result
-} = require('underscore');
-const {
-    handleLoggedOutPlayers
+    handleLoggedOutPlayers,
+    GameState
 } = require('./utils/game-utils');
 
 var app = express();
 
 var io = app.io = require('socket.io')();
 
-var connections = new Map();
+global.connections = new Map();
 var mapGameResult = require('./utils/game-utils').mapResult;
 var deleteById = require('./utils/game-utils').deleteById;
 
 
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
     let {
         gameId,
         player
     } = socket.request._query;
-    console.log('connected :' + player);
-    connections.set(player, socket);
-    handleConnect(gameId, player);
+    if (!global.connections.get(player)) {
+        console.log('connected :' + player + ":" + gameId);
+        global.connections.set(player, socket);
+        await handleConnect(gameId, player);
 
-    socket.on('updated', (gameId) => {
-        dbService.getOne('games', {
-            '_id': new ObjectID(gameId)
-        }).then(result => {
+        socket.on('updated', async (gameId) => {
+            const result = await dbService.getOne('games', {
+                '_id': new ObjectID(gameId)
+            });
             if (result) {
                 result.players.forEach((user, playerId) => {
-                    if (user != player && connections.get(user)) {
-                        connections.get(user).emit('updateRequest', mapGameResult(result, playerId));
+                    if (user != player && global.connections.get(user)) {
+                        global.connections.get(user).emit('updateRequest', mapGameResult(result, playerId));
                     }
                 });
             }
@@ -49,13 +48,15 @@ io.on('connection', (socket) => {
                 deleteById(result._id);
             }
         });
-    });
 
-    socket.on('disconnect', () => {
-        console.log('disconnected :' + player);
-        connections.delete(player);
-        handleDisconnect(gameId, player);
-    })
+        socket.on('disconnect', async () => {
+            if (global.connections.get(player)) {
+                console.log('disconnected :' + player + ' : ' + gameId);
+                global.connections.delete(player);
+                await handleDisconnect(gameId, player);
+            }
+        });
+    }
 });
 
 async function handleDisconnect(gameId, player) {
@@ -72,42 +73,32 @@ async function handleDisconnect(gameId, player) {
                 }
             });
         } else {
-            result = await dbService.updateOne('games', {
-                '_id': result._id
-            }, {
-                $push: {
-                    'loggedOutPlayers': player
+            if (result.loggedOutPlayers.findIndex(val => val === player) === -1 && result.players.findIndex(val => val === player) > 0) {
+                result = await dbService.updateOne('games', {
+                    '_id': result._id
+                }, {
+                    $addToSet: {
+                        'loggedOutPlayers': player
+                    }
+                });
+                if (result) {
+                    result = await handleLoggedOutPlayers(result);
                 }
-            });
-            if (result) {
-                result = await handleLoggedOutPlayers(result);
             }
         }
-        if (result) {
+        if (result && !(result.state === GameState.Results && result.loggedOutPlayers && result.loggedOutPlayers.length !== result.numberOfPlayers && result.decks.freeDeck.length === 0) && result.state !== GameState.End && result.state !== GameState.Rematch) {
             if (result.numberOfPlayers - result.loggedOutPlayers.length === 0) {
                 await deleteById(result._id);
             } else {
                 result.players.forEach((player, playerId) => {
-                    if (connections.get(player)) {
-                        connections.get(player).emit('updateRequest', mapGameResult(result, playerId));
+                    if (global.connections.get(player) && (!result.loggedOutPlayers || result.loggedOutPlayers.findIndex(pl => pl === player) === -1)) {
+                        global.connections.get(player).emit('updateRequest', mapGameResult(result, playerId));
                     }
                 });
             }
         }
-        // } else {
-        //     if (result.players.length === 1) {
-        //         await deleteById(result._id);
     }
-    // result.players.forEach(player => {
-    //     if (connections.get(player)) {
-    //         connections.get(player).emit('updateRequest', undefined);
-    //     }
-    // });
-    // await dbService.deleteOne('games', {
-    //     '_id': result._id
-    // });
-    // }
-    // }
+
 }
 
 async function handleConnect(gameId, player) {
@@ -126,8 +117,8 @@ async function handleConnect(gameId, player) {
         }
         if (result) {
             result.players.forEach((user, playerId) => {
-                if (user != player && connections.get(user)) {
-                    connections.get(user).emit('updateRequest', mapGameResult(result, playerId));
+                if (user != player && global.connections.get(user)) {
+                    global.connections.get(user).emit('updateRequest', mapGameResult(result, playerId));
                 }
             });
         }
@@ -150,4 +141,5 @@ global.dburi = 'mongodb+srv://dixit-owner:64697869742d6f776e6572@dixitcluster-t7
 global.dbname = 'dixit-resources';
 
 
+dbService.deleteAll('games');
 module.exports = app;

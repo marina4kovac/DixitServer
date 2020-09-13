@@ -82,12 +82,37 @@ async function deleteOne(collection, filter) {
     }
 }
 
+async function deleteAll(collection) {
+    let database = await openDB();
+    try {
+        let db = database.db(dbNAME);
+        let result = await db.collection(collection).deleteMany({});
+        return result;
+    } finally {
+        await database.close();
+    }
+}
 
+async function updateOrInsert(collection, filter, updateOpts) {
+    let database = await openDB();
+    try {
+        let db = database.db(dbNAME);
+        const result = await db.collection(collection).findOneAndUpdate(filter, updateOpts, {
+            returnOriginal: true,
+            upsert: true
+        });
+        return result.value;
+    } finally {
+        await database.close();
+    }
+}
 
 module.exports = {
     getOne,
     saveOne,
     updateOne,
+    updateOrInsert,
     getAll,
-    deleteOne
+    deleteOne,
+    deleteAll
 }
