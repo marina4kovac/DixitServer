@@ -131,7 +131,11 @@ router.post('/joinRematchGame', cors(), (req, res, next) => {
     });
 });
 
-
+router.get('/getGameHistory', cors(), (req, res, next) => {
+    dbService.getAll('finishedGames', {}).then(finished => res.json({
+        games: finished
+    }));
+});
 
 
 module.exports = router;
