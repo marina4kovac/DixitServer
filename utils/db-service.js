@@ -60,7 +60,7 @@ async function getAll(collection, filter) {
     let database = await openDB();
     try {
         let db = database.db(dbNAME);
-        let result = db.collection(collection).find(filter);
+        let result = await db.collection(collection).find(filter);
         if (!result) {
             return [];
         } else {

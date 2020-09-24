@@ -3,8 +3,6 @@ var router = express.Router();
 var cors = require('cors');
 var dbService = require('../utils/db-service');
 
-var mongoClient = require('mongodb').MongoClient;
-
 router.get('/', cors(), function (req, res, next) {
   res.json({
     users: [{

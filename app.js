@@ -39,6 +39,7 @@ io.on('connection', async (socket) => {
             });
             if (result) {
                 result.players.forEach((user, playerId) => {
+                    console.log('updated -> update ' + player);
                     if (user != player && global.connections.get(user)) {
                         global.connections.get(user).emit('updateRequest', mapGameResult(result, playerId));
                     }
@@ -65,6 +66,7 @@ async function handleDisconnect(gameId, player) {
     });
     if (result) {
         if (result.state === 0) {
+            console.log('updateGame');
             result = await dbService.updateOne('games', {
                 '_id': result._id
             }, {
@@ -72,18 +74,23 @@ async function handleDisconnect(gameId, player) {
                     'players': player
                 }
             });
+            console.log('updateGame');
         } else {
             if (result.loggedOutPlayers.findIndex(val => val === player) === -1 && result.players.findIndex(val => val === player) > 0) {
+                console.log('updateGame');
                 result = await dbService.updateOne('games', {
                     '_id': result._id
                 }, {
-                    $addToSet: {
+                    $push: {
                         'loggedOutPlayers': player
                     }
                 });
-                if (result) {
-                    result = await handleLoggedOutPlayers(result);
-                }
+                console.log('updateGame');
+            }
+            if (result) {
+                console.log('handling disconnected now');
+                result = await handleLoggedOutPlayers(result);
+                console.log('returned -> ' + result.word);
             }
         }
         if (result && !(result.state === GameState.Results && result.loggedOutPlayers && result.loggedOutPlayers.length !== result.numberOfPlayers && result.decks.freeDeck.length === 0) && result.state !== GameState.End && result.state !== GameState.Rematch) {
@@ -92,6 +99,7 @@ async function handleDisconnect(gameId, player) {
             } else {
                 result.players.forEach((player, playerId) => {
                     if (global.connections.get(player) && (!result.loggedOutPlayers || result.loggedOutPlayers.findIndex(pl => pl === player) === -1)) {
+                        console.log(`updated discon. -> ${player} ${result.word}`);
                         global.connections.get(player).emit('updateRequest', mapGameResult(result, playerId));
                     }
                 });
@@ -117,6 +125,7 @@ async function handleConnect(gameId, player) {
         }
         if (result) {
             result.players.forEach((user, playerId) => {
+                console.log(`updated -> conn. ${player}`);
                 if (user != player && global.connections.get(user)) {
                     global.connections.get(user).emit('updateRequest', mapGameResult(result, playerId));
                 }

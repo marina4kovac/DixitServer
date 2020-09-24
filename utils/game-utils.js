@@ -121,7 +121,7 @@ async function joinGame(player, gameId, numberOfPlayers, noObj) {
 
 }
 
-async function updateState(gameId, newState, player) {
+async function updateState(gameId, newState) {
     let result = await dbService.updateOne('games', {
         '_id': gameId
     }, {
@@ -130,7 +130,7 @@ async function updateState(gameId, newState, player) {
         }
     });
     if (!result) {
-        result = await updateState(gameId, newState, player);
+        result = await updateState(gameId, newState);
     }
     return result;
 }
@@ -202,7 +202,7 @@ async function guessCard(gameId, player, card) {
     if (result && result.guesses === result.numberOfPlayers - 1) {
         result = await calcPoints(result);
         if (result) {
-            result = await updateState(result._id, GameState.Results, player);
+            result = await updateState(result._id, GameState.Results);
             if (result) {
                 result = await handleLoggedOutPlayers(result);
             }
@@ -230,7 +230,7 @@ async function calcPoints(result) {
             }
         }
     });
-    result = dbService.updateOne('games', {
+    result = await dbService.updateOne('games', {
         '_id': result._id
     }, {
         $inc: inc,
@@ -276,7 +276,7 @@ async function returnFromResults(gameId, player) {
             newState = GameState.End;
         }
         if (result && result._id) {
-            result = await updateState(result._id, newState, player);
+            result = await updateState(result._id, newState);
             if (result) {
                 result = await handleLoggedOutPlayers(result);
             }
@@ -454,12 +454,14 @@ function mapResult(result, playerId) {
 
 async function handleLoggedOutPlayers(game) {
     let result = game;
+    console.log(game);
     if (game) {
         if (game.state === GameState.ChoosingWord && game.loggedOutPlayers.findIndex(pl => pl === game.players[game.playerChoosing]) > -1) {
             const hand = game.decks.playersDecks[game.playerChoosing];
             const random_card = Math.floor(Math.random() * hand.length);
             const playerDeck = `decks.playersDecks.${game.playerChoosing}`;
             let cardID = hand.splice(random_card, 1)[0];
+            console.log('updating in db');
             result = await dbService.updateOne('games', {
                 '_id': game._id
             }, {
@@ -477,7 +479,8 @@ async function handleLoggedOutPlayers(game) {
                 $pull: {
                     [playerDeck]: cardID
                 }
-            })
+            });
+            console.log('updated db -> ' + result.word);
         } else if (game.state === GameState.PlayingCards) {
             const tableDeck = game.decks.tableDeck;
             for (let pl of game.loggedOutPlayers) {
@@ -505,16 +508,37 @@ async function handleLoggedOutPlayers(game) {
                     }
                 }
             }
-        } else if (game.decks.freeDeck.length === 0 && (game.state === GameState.Results || game.state === GameState.End)) {
+        } else if (game.decks.freeDeck.length === 0 && (game.state === GameState.End)) {
             await dbService.saveOne('finishedGames', {
-                _id: game._id,
-                gameName: game,
+                _id: undefined,
+                gameName: game.gameName,
                 players: game.players,
                 points: game.points,
                 date: new Date()
             });
+        } else if (game.state === GameState.Results && game.decks.freeDeck.length !== 0) {
+            if (game.returned >= game.numberOfPlayers - game.loggedOutPlayers.length) {
+                {
+                    console.log('generateNewRoundDisconnect');
+                    result = await generateNewRound(game);
+
+                    newState = GameState.ChoosingWord;
+                    if (result && result._id) {
+                        // result = await updateState(result._id, newState, player);
+                        result = await dbService.updateOne('games', {
+                            '_id': result_id
+                        }, {
+                            $set: {
+                                'state': newState
+                            }
+                        });
+                        console.log('updated');
+                    }
+                }
+            }
         }
     }
+    console.log('returning result ' + result.word);
     return result;
 }
 
