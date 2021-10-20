@@ -96,7 +96,6 @@ router.post('/guessCard', cors(), (req, res, next) => {
     guessCard(gameId, player, card).then(result => res.json(result && mapResult(result, result.players.findIndex(val => val === player))));
 });
 
-
 router.post('/returnFromResults', cors(), (req, res, next) => {
     let {
         gameId,
