@@ -146,9 +146,6 @@ app.use(cors());
 app.use('/api/v1/users', users);
 app.use('/api/v1/games', games);
 
-global.dburi = 'mongodb+srv://dixit-owner:64697869742d6f776e6572@dixitcluster-t7ctm.mongodb.net/test?retryWrites=true&w=majority';
-global.dbname = 'dixit-resources';
-
 
 dbService.deleteAll('games');
 module.exports = app;

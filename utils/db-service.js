@@ -1,7 +1,7 @@
 const dbUsername = 'dixit-owner';
-const dbPassword = 'H3895X12dIg2P3UL';
-const dbURI = `mongodb+srv://${dbUsername}:${dbPassword}@@cluster0.diody.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
+const dbPassword = 'Xwm2banKfrTP9ixu';
 const dbNAME = 'dixit-resources';
+const dbURI = `mongodb+srv://${dbUsername}:${dbPassword}@cluster0.diody.mongodb.net/${dbNAME}?retryWrites=true&w=majority`;
 var mongoClient = require('mongodb').MongoClient;
 
 
