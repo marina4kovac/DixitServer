@@ -34,7 +34,11 @@ server.on('listening', onListening);
 
 var io = app.io;
 io.attach(server);
-
+io.opts = {
+  cors: {
+    origin: "*"
+  }
+}
 /**
  * Normalize a port into a number, string, or false.
  */
