@@ -36,9 +36,11 @@ var io = app.io;
 io.attach(server);
 io.opts = {
   cors: {
-    origin: ["*", "https://marina4kovac.github.io"],
-    credentials:true
-  }
+    origin: "*",
+    credentials:true,
+    allowedHeaders: ['Content-Type', 'Authorization']
+  },
+  transports: ['websocket', 'polling', 'flashsocket'] 
 }
 /**
  * Normalize a port into a number, string, or false.
