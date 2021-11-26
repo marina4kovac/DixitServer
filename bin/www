@@ -36,7 +36,7 @@ var io = app.io;
 io.attach(server);
 io.opts = {
   cors: {
-    origin: "*",
+    origin: ["*", "https://marina4kovac.github.io"],
     credentials:true
   }
 }
