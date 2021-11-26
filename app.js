@@ -23,7 +23,8 @@ io.opts = {
       origin: "https://dixit-online-game.herokuapp.com",
       credentials:true,
       allowedHeaders: ['Content-Type', 'Authorization'],
-      methods: ['POST', 'GET', 'PUT', 'DELETE']
+      methods: ['POST', 'GET', 'PUT', 'DELETE'],
+      allowEIO3: true
     }
   }
 
