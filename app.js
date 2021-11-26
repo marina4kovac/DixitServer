@@ -18,6 +18,14 @@ var app = express();
 
 var io = app.io = require('socket.io')();
 
+io.opts = {
+    cors: {
+      origin: "*",
+    //   credentials:true,
+    //   allowedHeaders: ['Content-Type', 'Authorization']
+    }
+  }
+
 global.connections = new Map();
 var mapGameResult = require('./utils/game-utils').mapResult;
 var deleteById = require('./utils/game-utils').deleteById;
