@@ -37,7 +37,7 @@ io.attach(server);
 io.opts = {
   cors: {
     origin: "*",
-    methods: ["GET,PUT,POST,DELETE"]
+    credentials:true
   }
 }
 /**
