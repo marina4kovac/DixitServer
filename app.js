@@ -21,7 +21,7 @@ var io = app.io = require('socket.io')();
 io.opts = {
     cors: {
       origin: "https://dixit-online-game.herokuapp.com",
-      credentials:true,
+    //   credentials:true,
     //   allowedHeaders: ['Content-Type', 'Authorization']
     }
   }
