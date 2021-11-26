@@ -21,7 +21,7 @@ var io = app.io = require('socket.io')();
 io.opts = {
     cors: {
       origin: "*",
-    //   credentials:true,
+      credentials:true,
     //   allowedHeaders: ['Content-Type', 'Authorization']
     }
   }
