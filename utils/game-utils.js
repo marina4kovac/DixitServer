@@ -410,7 +410,8 @@ function mapResult(result, playerId) {
         'loggedOutPlayers',
         'gameName',
         'creator',
-        'password'
+        'password',
+        'guesses'
     ];
 
     let mappedResult = {};
